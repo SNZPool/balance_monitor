@@ -6,13 +6,13 @@ GOTEST=$(GOCMD) test
 GOGET=$(GOCMD) get
 
 test:
-	go run -mod=vendor ./cmd/app/balance_monitor.go -config ./depolyments/config-sample.toml
+	go run ./cmd/app/balance_monitor.go -config ./depolyments/config-sample.toml
 
 install:
-	go mod mode
+	go mod tidy
 
 build:
-	go build -mod=vendor -v -o ./bin/balance_monitor ./cmd/app 
+	go build -v -o ./bin/balance_monitor ./cmd/app 
 
 build_linux:
-	$(GOBUILD) -mod=vendor -v -o ./bin/balance_monitor ./cmd/app
+	$(GOBUILD) -v -o ./bin/balance_monitor ./cmd/app

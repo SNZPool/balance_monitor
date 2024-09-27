@@ -8,7 +8,6 @@ require (
 	github.com/bitly/go-simplejson v0.5.1
 	github.com/ethereum/go-ethereum v1.14.8
 	github.com/prometheus/client_golang v1.20.2
-	github.com/tidwall/gjson v1.17.3
 )
 
 require (
@@ -38,8 +37,6 @@ require (
 	github.com/shirou/gopsutil v3.21.11+incompatible // indirect
 	github.com/stretchr/testify v1.9.0 // indirect
 	github.com/supranational/blst v0.3.11 // indirect
-	github.com/tidwall/match v1.1.1 // indirect
-	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.13 // indirect
 	github.com/tklauser/numcpus v0.7.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
