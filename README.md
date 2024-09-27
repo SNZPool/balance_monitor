@@ -1,3 +1,5 @@
+[![Go Build Check](https://github.com/SNZPool/balance_monitor/actions/workflows/build.yml/badge.svg)](https://github.com/SNZPool/balance_monitor/actions/workflows/build.yml)
+
 # Introduction
 
 This project is designed to retrieve the gas balance from multiple addresses across various blockchains. Currently, it supports EVM chains and the Starknet chain.
