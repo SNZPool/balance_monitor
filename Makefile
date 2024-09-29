@@ -9,7 +9,7 @@ test:
 	go run ./cmd/app/balance_monitor.go -config ./depolyments/config-sample.toml
 
 install:
-	@GOPROXY=https://mycompany.com/proxy,direct go mod tidy
+	@GOPROXY=https://proxy.golang.org,direct go mod tidy
 
 build:
 	go build -v -o ./bin/balance_monitor ./cmd/app 
