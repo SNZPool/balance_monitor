@@ -1,4 +1,4 @@
-package evm
+package tron
 
 import (
 	"bytes"
@@ -63,7 +63,7 @@ func GetBalance(urlStr string, ethAddress string) float64 {
 		// fmt.Println(err)
 		return -1
 	}
-	balance := float64(num10) / 1000000000000000000
+	balance := float64(num10) / 1000000
 
 	return balance
 }
@@ -149,7 +149,7 @@ func GetBalanceGo(urlStr string, ethAddress string) float64 {
 
 	fbalance := new(big.Float)
 	fbalance.SetString(balance.String())
-	ethValueBig := new(big.Float).Quo(fbalance, big.NewFloat(math.Pow10(18)))
+	ethValueBig := new(big.Float).Quo(fbalance, big.NewFloat(math.Pow10(6)))
 	ethValue, _ := ethValueBig.Float64()
 	//fmt.Println(ethValue)
 

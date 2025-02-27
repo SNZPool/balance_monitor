@@ -52,6 +52,20 @@
           "warnThreshold": 0.001
         }
       ]
+    },
+    {
+      "network": "tron",
+      "endpoints": [
+          "https://api.trongrid.io/jsonrpc"
+      ],
+      "addressList": [
+        {
+          "address":"0xD321B44079CF1AC77F29D719D52DB168206EA246",
+          "label":"tron_user1_account",
+          "infoThreshold": 0.002,
+          "warnThreshold": 0.001
+        }
+      ]
     }
   ]
 }

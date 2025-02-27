@@ -6,6 +6,7 @@ import (
 
 	evm "github.com/snzpool/balance_monitor/pkg/blockchain/evm"
 	startknet "github.com/snzpool/balance_monitor/pkg/blockchain/starknet"
+	tron "github.com/snzpool/balance_monitor/pkg/blockchain/tron"
 	common "github.com/snzpool/balance_monitor/pkg/common"
 )
 
@@ -14,6 +15,8 @@ var gEVMList = []string{
 }
 
 var gStarknetList = []string{"starknet", "starknet_eth", "starknet_strk"}
+
+var gTronList = []string{"tron"}
 
 func GetBlockHeight(urlStr string, network string) int64 {
 	var result int64 = -1
@@ -29,6 +32,13 @@ func GetBlockHeight(urlStr string, network string) int64 {
 		if result < 0 {
 			time.Sleep(time.Duration(interval) * time.Second)
 			result = startknet.GetBlockHeight(urlStr)
+		}
+		return result
+	} else if common.InStringList(network, gTronList) {
+		result := tron.GetBlockHeight(urlStr)
+		if result < 0 {
+			time.Sleep(time.Duration(interval) * time.Second)
+			result = tron.GetBlockHeight(urlStr)
 		}
 		return result
 	} else {
@@ -62,6 +72,13 @@ func GetBalance(urlStr string, network string, address string) float64 {
 			}
 			return result
 		}
+	} else if common.InStringList(network, gTronList) {
+		result := tron.GetBalanceGo(urlStr, address)
+		if result < 0 {
+			time.Sleep(time.Duration(interval) * time.Second)
+			result = tron.GetBalanceGo(urlStr, address)
+		}
+		return result
 	} else {
 		fmt.Printf("%s is not supported now. Please contact administrator to add it\n", network)
 		return -1

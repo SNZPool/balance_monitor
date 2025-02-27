@@ -85,6 +85,20 @@ You can find a example config file at path `./depolyments/config-sample.toml`
           "warnThreshold": 0.001
         }
       ]
+    },
+    {
+      "network": "tron",
+      "endpoints": [
+          "https://api.trongrid.io/jsonrpc"
+      ],
+      "addressList": [
+        {
+          "address":"0xD321B44079CF1AC77F29D719D52DB168206EA246",
+          "label":"tron_user1_account",
+          "infoThreshold": 0.002,
+          "warnThreshold": 0.001
+        }
+      ]
     }
   ]
 }
@@ -98,7 +112,7 @@ You can find a example config file at path `./depolyments/config-sample.toml`
 - info: monitor info arrays, divided by blockchains
 
 **Blockchain Parameter**
-- network: support `evm`(Native Token), `starknet`(ETH) and `starknet_strk`(STRK)
+- network: support `evm`(Native Token), `starknet`(ETH), `starknet_strk`(STRK) and `tron`(TRX).
 - endpoins: you can enter multiple rpc's at the same time. Only the rpc with the highest height will be used
 - addressList: you can enter multiple address for monitoring
 
