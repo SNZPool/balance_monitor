@@ -72,7 +72,7 @@ You can find a example config file at path `./depolyments/config-sample.toml`
       ]
     },
     {
-      "network": "startknet_strk",
+      "network": "starknet_strk",
       "endpoints": [
           "https://starknet-mainnet.public.blastapi.io",
           "https://free-rpc.nethermind.io/mainnet-juno"
