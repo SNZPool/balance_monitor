@@ -27,12 +27,22 @@ type Network struct {
 type Conf struct {
 	Frequency   int       `json:"frequency"`
 	MetricPort  int       `json:"metricPort"`
+	RpcRPS      float64   `json:"rpcRPS"` // per-endpoint requests/sec; default 5 when <= 0
 	NetworkList []Network `json:"info"`
 }
+
+const defaultRpcRPS = 5.0
 
 //
 var gConf Conf
 
+// EffectiveRpcRPS returns the configured per-endpoint RPS, or the default when unset/invalid.
+func EffectiveRpcRPS() float64 {
+	if gConf.RpcRPS <= 0 {
+		return defaultRpcRPS
+	}
+	return gConf.RpcRPS
+}
 //
 func InitConfig(configPath string) error {
 
@@ -63,6 +73,7 @@ func ReadConfig(configPath string) error {
 func PrintConfig() {
 	fmt.Println(gConf.Frequency)
 	fmt.Println(gConf.MetricPort)
+	fmt.Printf("rpcRPS: %g\n", EffectiveRpcRPS())
 	for i := 0; i < len(gConf.NetworkList); i++ {
 		fmt.Println(gConf.NetworkList[i].Network)
 		if gConf.NetworkList[i].TokenAddress != "" {

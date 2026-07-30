@@ -48,6 +48,14 @@ make test
 
 Prometheus metrics are served at `http://<host>:<metricPort>/metrics`.
 
+On-demand CSV export of the latest polled balances (no continuous file write):
+
+```bash
+curl -o balances.csv "http://<host>:<metricPort>/export.csv"
+```
+
+Columns: `network`, `label`, `address`, `balance`, `tokenAddress` (empty when monitoring the network default / native asset). Data reflects the last completed poll for each address; before the first cycle finishes the file may be empty or partial.
+
 ## Configuration
 
 Full example: [`depolyments/config-sample.toml`](./depolyments/config-sample.toml).
@@ -56,8 +64,9 @@ Full example: [`depolyments/config-sample.toml`](./depolyments/config-sample.tom
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `frequency` | int | Poll interval in seconds |
+| `frequency` | int | Poll interval in seconds (starts after the previous cycle finishes) |
 | `metricPort` | int | HTTP port for `/metrics` |
+| `rpcRPS` | float | Optional. Max requests per second **per endpoint URL** (default `5` when omitted or `<= 0`). Protects public RPCs from bursts |
 | `info` | array | Per-chain (or per-asset) monitor groups |
 
 ### Network group (`info[]`)
@@ -173,12 +182,17 @@ If `decimals()` fails on a non-standard contract, set `"tokenDecimals": 6` (path
 
 ## How it works
 
-Each `frequency` seconds, for every `info` group:
+Each poll cycle:
 
-1. Query block height on all `endpoints` and pick the highest.
-2. For each address, fetch the balance (native or token).
-3. Compare against thresholds and update Prometheus gauges.
-4. On fetch failure the balance is treated as `-1` and `rpc_bad` is set to `1`. Failed RPC calls are retried once after a short delay.
+1. Run all `info` groups **in parallel** (different chains do not wait on each other).
+2. Within a group, probe all `endpoints` for block height **in parallel**, then pick the highest.
+3. Fetch all addresses in that group **in parallel** against the selected RPC.
+4. Compare against thresholds and update Prometheus gauges.
+5. When the whole cycle finishes, sleep `frequency` seconds (cycles do not overlap).
+
+**Rate limiting:** every height/balance request waits on a per-endpoint-URL limiter (`rpcRPS`, default 5, burst 1). Different URLs are independent; the same URL shared by multiple groups shares one limiter. Failed RPC calls are still retried once after a short delay inside the blockchain client.
+
+On fetch failure the balance is treated as `-1` and `rpc_bad` is set to `1`.
 
 ## Monitor metrics
 

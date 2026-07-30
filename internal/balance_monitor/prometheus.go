@@ -36,14 +36,13 @@ var (
 )
 
 func InitPrometheus() {
-	//
 	http.Handle("/metrics", promhttp.Handler())
+	http.HandleFunc("/export.csv", handleExportCSV)
 	prometheus.MustRegister(balance_monitor_address_balance)
 	prometheus.MustRegister(balance_monitor_rpc_bad)
 	prometheus.MustRegister(balance_monitor_balance_low)
 	prometheus.MustRegister(balance_monitor_balance_empty)
 
-	//
 	StartServer(int64(gConf.MetricPort))
 }
 
