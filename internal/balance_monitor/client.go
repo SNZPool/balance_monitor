@@ -34,8 +34,9 @@ func RunBalanceCheck() {
 }
 
 func checkNetwork(ctx context.Context, limiters *EndpointLimiters, oneNetwork Network) {
+	typ := oneNetwork.Type
 	networkName := oneNetwork.Network
-	fmt.Printf("network: %s\n", networkName)
+	fmt.Printf("type: %s, network: %s\n", typ, networkName)
 
 	endpoints := oneNetwork.Endpoints
 	if len(endpoints) == 0 {
@@ -55,7 +56,7 @@ func checkNetwork(ctx context.Context, limiters *EndpointLimiters, oneNetwork Ne
 				blockNumbers[idx] = -1
 				return
 			}
-			blockNumbers[idx] = int(blockchain.GetBlockHeight(url, networkName))
+			blockNumbers[idx] = int(blockchain.GetBlockHeight(url, typ))
 			fmt.Printf("- %s: %d\n", url, blockNumbers[idx])
 		}(j)
 	}
@@ -82,7 +83,7 @@ func checkNetwork(ctx context.Context, limiters *EndpointLimiters, oneNetwork Ne
 			}
 			balance := blockchain.GetBalance(
 				selectedUrl,
-				networkName,
+				typ,
 				oneAddressInfo.Address,
 				oneNetwork.TokenAddress,
 				oneNetwork.TokenDecimals,

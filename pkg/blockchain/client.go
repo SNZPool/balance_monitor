@@ -7,52 +7,51 @@ import (
 	evm "github.com/snzpool/balance_monitor/pkg/blockchain/evm"
 	startknet "github.com/snzpool/balance_monitor/pkg/blockchain/starknet"
 	tron "github.com/snzpool/balance_monitor/pkg/blockchain/tron"
-	common "github.com/snzpool/balance_monitor/pkg/common"
 )
 
-var gEVMList = []string{
-	"eth", "ethereum", "bsc", "matic", "polygon", "heco", "ftm", "fatom", "arb", "arbitrum", "xdai", "avax", "avalanche", "harmony", "one", "metis", "evm", "tempo",
-}
+// Supported type values for protocol routing.
+const (
+	TypeEVM          = "evm"
+	TypeStarknet     = "starknet"
+	TypeStarknetSTRK = "starknet_strk"
+	TypeTron         = "tron"
+)
 
-var gStarknetList = []string{"starknet", "starknet_eth", "starknet_strk"}
-
-var gTronList = []string{"tron"}
-
-func GetBlockHeight(urlStr string, network string) int64 {
-	var result int64 = -1
-	if common.InStringList(network, gEVMList) {
-		result = evm.GetBlockHeight(urlStr)
+func GetBlockHeight(urlStr string, typ string) int64 {
+	switch typ {
+	case TypeEVM:
+		result := evm.GetBlockHeight(urlStr)
 		if result < 0 {
 			time.Sleep(time.Duration(interval) * time.Second)
 			result = evm.GetBlockHeight(urlStr)
 		}
 		return result
-	} else if common.InStringList(network, gStarknetList) {
+	case TypeStarknet, TypeStarknetSTRK:
 		result := startknet.GetBlockHeight(urlStr)
 		if result < 0 {
 			time.Sleep(time.Duration(interval) * time.Second)
 			result = startknet.GetBlockHeight(urlStr)
 		}
 		return result
-	} else if common.InStringList(network, gTronList) {
+	case TypeTron:
 		result := tron.GetBlockHeight(urlStr)
 		if result < 0 {
 			time.Sleep(time.Duration(interval) * time.Second)
 			result = tron.GetBlockHeight(urlStr)
 		}
 		return result
-	} else {
-		fmt.Printf("%s is not supported now. Please contact administrator to add it\n", network)
+	default:
+		fmt.Printf("type %q is not supported (use evm, starknet, starknet_strk, or tron)\n", typ)
 		return -1
 	}
 }
 
-// GetBalance fetches the balance for address on the given network.
-// When tokenAddress is empty, uses the network default asset (native for EVM/Tron;
-// ETH or STRK for Starknet aliases). When set, queries that ERC20 / SNIP-20 contract.
-func GetBalance(urlStr string, network string, address string, tokenAddress string, tokenDecimals *int) float64 {
-
-	if common.InStringList(network, gEVMList) {
+// GetBalance fetches the balance for address using the given protocol type.
+// When tokenAddress is empty, uses the type default asset (native for EVM/Tron;
+// ETH for starknet, STRK for starknet_strk). When set, queries that ERC20 / SNIP-20 contract.
+func GetBalance(urlStr string, typ string, address string, tokenAddress string, tokenDecimals *int) float64 {
+	switch typ {
+	case TypeEVM:
 		var result float64
 		if tokenAddress != "" {
 			result = evm.GetERC20Balance(urlStr, tokenAddress, address, tokenDecimals)
@@ -68,7 +67,7 @@ func GetBalance(urlStr string, network string, address string, tokenAddress stri
 			}
 		}
 		return result
-	} else if common.InStringList(network, gStarknetList) {
+	case TypeStarknet, TypeStarknetSTRK:
 		if tokenAddress != "" {
 			result := startknet.GetBalance(urlStr, address, tokenAddress, tokenDecimals)
 			if result < 0 {
@@ -77,7 +76,7 @@ func GetBalance(urlStr string, network string, address string, tokenAddress stri
 			}
 			return result
 		}
-		if network == "starknet_strk" {
+		if typ == TypeStarknetSTRK {
 			result := startknet.GetBalanceSTRK(urlStr, address)
 			if result < 0 {
 				time.Sleep(time.Duration(interval) * time.Second)
@@ -91,9 +90,9 @@ func GetBalance(urlStr string, network string, address string, tokenAddress stri
 			result = startknet.GetBalanceETH(urlStr, address)
 		}
 		return result
-	} else if common.InStringList(network, gTronList) {
+	case TypeTron:
 		if tokenAddress != "" {
-			fmt.Printf("tokenAddress is not supported for network %s\n", network)
+			fmt.Printf("tokenAddress is not supported for type %s\n", typ)
 			return -1
 		}
 		result := tron.GetBalanceGo(urlStr, address)
@@ -102,15 +101,14 @@ func GetBalance(urlStr string, network string, address string, tokenAddress stri
 			result = tron.GetBalanceGo(urlStr, address)
 		}
 		return result
-	} else {
-		fmt.Printf("%s is not supported now. Please contact administrator to add it\n", network)
+	default:
+		fmt.Printf("type %q is not supported (use evm, starknet, starknet_strk, or tron)\n", typ)
 		return -1
 	}
 }
 
-func GetGasCost(urlStr string, network string, address string, startTime string, endTime string) float64 {
-	if common.InStringList(network, gEVMList) {
-
+func GetGasCost(urlStr string, typ string, address string, startTime string, endTime string) float64 {
+	if typ == TypeEVM {
 	} else {
 		fmt.Println("waiting")
 	}

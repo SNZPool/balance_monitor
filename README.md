@@ -4,15 +4,16 @@
 
 Poll wallet balances across multiple chains and expose Prometheus gauges for balance and low-balance thresholds.
 
-Supported chains:
+Supported protocols (`type`):
 
-| Family | Default asset (no `tokenAddress`) | Optional `tokenAddress` |
+| `type` | Default asset (no `tokenAddress`) | Optional `tokenAddress` |
 |--------|-----------------------------------|-------------------------|
-| EVM (aliases below) | Native gas token (`eth_getBalance` / `BalanceAt`) | Any ERC20 (`balanceOf` + `decimals`) |
-| Starknet | ETH (`starknet` / `starknet_eth`) or STRK (`starknet_strk`) | Any SNIP-20-style contract |
-| Tron | Native TRX | Not supported |
+| `evm` | Native gas token (`BalanceAt`) | Any ERC20 (`balanceOf` + `decimals`) |
+| `starknet` | Starknet ETH | Any SNIP-20-style contract |
+| `starknet_strk` | STRK | Any SNIP-20-style contract |
+| `tron` | Native TRX | Not supported |
 
-Old configs without `tokenAddress` / `tokenDecimals` / `symbol` keep working unchanged.
+`network` is the **chain identity** used in Prometheus labels and CSV export (e.g. `eth`, `base`, `tempo`). It is independent of `type`, so you do not need to register new chain aliases in code.
 
 ## Requirements
 
@@ -73,10 +74,11 @@ Full example: [`deployments/config-sample.json`](./deployments/config-sample.jso
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `network` | string | yes | Chain selector (see [Network values](#network-values)) |
+| `type` | string | yes | Protocol: `evm`, `starknet`, `starknet_strk`, or `tron` |
+| `network` | string | yes | Chain identity for metrics/export (e.g. `eth`, `base`, `tempo`). Free-form string |
 | `endpoints` | string[] | yes | RPC URLs; the one with the **highest block height** is used each cycle |
-| `symbol` | string | no | Gas / token symbol for CSV export and multi-chain stats (e.g. `ETH`, `pathUSD`). Display-only; not used for RPC calls |
-| `tokenAddress` | string | no | ERC20 / SNIP-20 contract. Empty = network default asset |
+| `symbol` | string | no | Gas / token symbol for CSV export and multi-chain stats (e.g. `ETH`, `pathUSD`). Display-only |
+| `tokenAddress` | string | no | ERC20 / SNIP-20 contract. Empty = type default asset |
 | `tokenDecimals` | int | no | Fallback decimals if on-chain `decimals()` fails |
 | `addressList` | array | yes | Addresses to monitor |
 
@@ -91,33 +93,18 @@ Full example: [`deployments/config-sample.json`](./deployments/config-sample.jso
 
 Prefer `infoThreshold > warnThreshold`. Threshold flags are mutually exclusive: critical sets only `balance_empty`, not both.
 
-### Network values
-
-**EVM aliases** (native when `tokenAddress` is empty; ERC20 when set):
-
-`eth`, `ethereum`, `bsc`, `matic`, `polygon`, `heco`, `ftm`, `fatom`, `arb`, `arbitrum`, `xdai`, `avax`, `avalanche`, `harmony`, `one`, `metis`, `evm`, `tempo`
-
-**Starknet:**
-
-| `network` | Default contract when `tokenAddress` is empty |
-|-----------|-----------------------------------------------|
-| `starknet`, `starknet_eth` | Starknet ETH |
-| `starknet_strk` | STRK |
-
-**Tron:** `tron` (native TRX only; `tokenAddress` is rejected).
-
 ### `tokenAddress` behavior
 
-| `network` | `tokenAddress` | Behavior |
-|-----------|----------------|----------|
-| EVM alias | empty | Native balance |
-| EVM alias | set | ERC20 `balanceOf` / `decimals` |
-| `starknet` / `starknet_eth` | empty | Default ETH contract |
+| `type` | `tokenAddress` | Behavior |
+|--------|----------------|----------|
+| `evm` | empty | Native balance |
+| `evm` | set | ERC20 `balanceOf` / `decimals` |
+| `starknet` | empty | Default ETH contract |
 | `starknet_strk` | empty | Default STRK contract |
-| any `starknet*` | set | Configured contract |
+| `starknet` / `starknet_strk` | set | Configured contract |
 | `tron` | set | Error (`rpc_bad`) |
 
-To monitor **two assets on the same chain**, use two `info` entries (for example native + ERC20, or Starknet ETH + STRK). Distinguishing assets in metrics relies on `network` and/or `label` — there is no `token` metric label.
+To monitor **two assets on the same chain**, use two `info` entries with the same `network` but different `type` / `tokenAddress` / `symbol` (and distinct `label`s).
 
 ### Examples
 
@@ -125,6 +112,7 @@ To monitor **two assets on the same chain**, use two `info` entries (for example
 
 ```json
 {
+  "type": "evm",
   "network": "tempo",
   "symbol": "pathUSD",
   "endpoints": ["https://tempo-mainnet.drpc.org"],
@@ -142,13 +130,33 @@ To monitor **two assets on the same chain**, use two `info` entries (for example
 
 If `decimals()` fails on a non-standard contract, set `"tokenDecimals": 6` (pathUSD uses 6 decimals on Tempo mainnet).
 
-**Starknet STRK via explicit contract** (equivalent default to `network: "starknet_strk"` with empty `tokenAddress`):
+**Base (L2 using ETH as gas):**
 
 ```json
 {
+  "type": "evm",
+  "network": "base",
+  "symbol": "ETH",
+  "endpoints": ["https://mainnet.base.org"],
+  "addressList": [
+    {
+      "address": "0xYourAddress",
+      "label": "chainlink_base_ocr",
+      "infoThreshold": 0.05,
+      "warnThreshold": 0.02
+    }
+  ]
+}
+```
+
+**Starknet STRK:**
+
+```json
+{
+  "type": "starknet_strk",
   "network": "starknet",
+  "symbol": "STRK",
   "endpoints": ["https://starknet-mainnet.public.blastapi.io"],
-  "tokenAddress": "0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
   "addressList": [
     {
       "address": "0xYourStarknetAccount",
@@ -160,13 +168,12 @@ If `decimals()` fails on a non-standard contract, set `"tokenDecimals": 6` (path
 }
 ```
 
-**Backward compatibility:** keep existing `network: "starknet_strk"` entries without `tokenAddress` so Prometheus `network` labels and alerts do not change. Migrating to `network: "starknet"` + `tokenAddress` changes the `network` label and may require updating dashboards/alerts.
-
-**EVM native** (unchanged from older configs):
+**EVM native (Metis):**
 
 ```json
 {
-  "network": "evm",
+  "type": "evm",
+  "network": "metis",
   "symbol": "METIS",
   "endpoints": [
     "https://andromeda.metis.io/?owner=1088",
@@ -199,7 +206,7 @@ On fetch failure the balance is treated as `-1` and `rpc_bad` is set to `1`.
 
 ## Monitor metrics
 
-Exported names use subsystem prefix `sdk_` (for example `sdk_balance_monitor_address_balance`).
+Exported names use subsystem prefix `sdk_` (for example `sdk_balance_monitor_address_balance`). The Prometheus `network` label is the config `network` field (chain identity), not `type`.
 
 | Metric | Labels | Description |
 |--------|--------|-------------|
@@ -211,8 +218,8 @@ Exported names use subsystem prefix `sdk_` (for example `sdk_balance_monitor_add
 Sample series:
 
 ```
-sdk_balance_monitor_address_balance{address="0x...",name="metis_user1_account",network="evm"} 0.335
-sdk_balance_monitor_balance_low{address="0x...",name="metis_user1_account",network="evm"} 0
-sdk_balance_monitor_balance_empty{address="0x...",name="metis_user1_account",network="evm"} 0
-sdk_balance_monitor_rpc_bad{name="metis_user1_account",network="evm"} 0
+sdk_balance_monitor_address_balance{address="0x...",name="metis_user1_account",network="metis"} 0.335
+sdk_balance_monitor_balance_low{address="0x...",name="metis_user1_account",network="metis"} 0
+sdk_balance_monitor_balance_empty{address="0x...",name="metis_user1_account",network="metis"} 0
+sdk_balance_monitor_rpc_bad{name="metis_user1_account",network="metis"} 0
 ```

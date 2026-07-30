@@ -17,10 +17,11 @@ type AddressInfo struct {
 }
 
 type Network struct {
-	Network       string        `json:"network"`
+	Type          string        `json:"type"`                     // protocol: evm | starknet | starknet_strk | tron
+	Network       string        `json:"network"`                  // chain identity for metrics/export (e.g. eth, base, tempo)
 	Endpoints     []string      `json:"endpoints"`
 	Symbol        string        `json:"symbol,omitempty"`        // gas/token symbol for export (e.g. ETH, pathUSD); display-only
-	TokenAddress  string        `json:"tokenAddress,omitempty"`  // empty = default asset for this network
+	TokenAddress  string        `json:"tokenAddress,omitempty"`  // empty = default asset for this type
 	TokenDecimals *int          `json:"tokenDecimals,omitempty"` // optional override; nil = read decimals on-chain
 	AddressList   []AddressInfo `json:"addressList"`
 }
@@ -76,7 +77,8 @@ func PrintConfig() {
 	fmt.Println(gConf.MetricPort)
 	fmt.Printf("rpcRPS: %g\n", EffectiveRpcRPS())
 	for i := 0; i < len(gConf.NetworkList); i++ {
-		fmt.Println(gConf.NetworkList[i].Network)
+		fmt.Printf("type: %s\n", gConf.NetworkList[i].Type)
+		fmt.Printf("network: %s\n", gConf.NetworkList[i].Network)
 		if gConf.NetworkList[i].Symbol != "" {
 			fmt.Printf("symbol: %s\n", gConf.NetworkList[i].Symbol)
 		}

@@ -3,7 +3,8 @@
   "metricPort": 8888,
   "info": [
     {
-      "network": "evm",
+      "type": "evm",
+      "network": "metis",
       "symbol": "METIS",
       "endpoints": [
           "https://andromeda.metis.io/?owner=1088",
@@ -25,6 +26,7 @@
       ]
     },
     {
+      "type": "evm",
       "network": "tempo",
       "symbol": "pathUSD",
       "endpoints": [
@@ -41,6 +43,7 @@
       ]
     },
     {
+      "type": "starknet",
       "network": "starknet",
       "symbol": "ETH",
       "endpoints": [
@@ -56,7 +59,8 @@
       ]
     },
     {
-      "network": "starknet_strk",
+      "type": "starknet_strk",
+      "network": "starknet",
       "symbol": "STRK",
       "endpoints": [
           "https://rpc.starknet.lava.build:443"
@@ -71,6 +75,7 @@
       ]
     },
     {
+      "type": "tron",
       "network": "tron",
       "symbol": "TRX",
       "endpoints": [
