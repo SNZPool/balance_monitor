@@ -1,0 +1,44 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+
+      - name: Install dependencies
+        run: make install
+
+      - name: Build linux/amd64 binary
+        run: make build_linux
+
+      - name: Package artifact
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          mkdir -p dist
+          cp bin/balance_monitor "dist/balance_monitor_${VERSION}_linux_amd64"
+          cd dist && sha256sum "balance_monitor_${VERSION}_linux_amd64" > "balance_monitor_${VERSION}_linux_amd64.sha256"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/balance_monitor_*_linux_amd64
+            dist/balance_monitor_*_linux_amd64.sha256
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -22,9 +22,28 @@ Supported protocols (`type`):
 ## Install and build
 
 ```bash
-make install   # go mod tidy
-make build     # ./bin/balance_monitor (host OS)
-# make build_linux   # linux/amd64 binary
+make install      # go mod tidy
+make build        # ./bin/balance_monitor (host OS)
+make build_linux  # static linux/amd64 binary (for production hosts)
+```
+
+### Release (GitHub)
+
+Push a version tag to publish a linux/amd64 binary:
+
+```bash
+git tag v1.2.0
+git push origin v1.2.0
+```
+
+The [Release](https://github.com/SNZPool/balance_monitor/actions/workflows/release.yml) workflow builds with `make build_linux` and uploads `balance_monitor_<tag>_linux_amd64` (plus sha256) to the GitHub Release.
+
+On the monitoring host:
+
+```bash
+# download the binary from the Release page, then:
+sudo install -m 755 balance_monitor_*_linux_amd64 /usr/local/bin/balance_monitor
+sudo systemctl restart balance_monitor   # if managed by systemd
 ```
 
 ## Usage

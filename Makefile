@@ -5,6 +5,8 @@ GOCLEAN=$(GOCMD) clean
 GOTEST=$(GOCMD) test
 GOGET=$(GOCMD) get
 
+.PHONY: test install build build_linux clean
+
 test:
 	go run ./cmd/app/balance_monitor.go -config ./deployments/config-sample.json
 
@@ -12,7 +14,13 @@ install:
 	@GOPROXY=https://proxy.golang.org,direct go mod tidy
 
 build:
-	go build -v -o ./bin/balance_monitor ./cmd/app 
+	mkdir -p ./bin
+	go build -v -o ./bin/balance_monitor ./cmd/app
 
+# Static linux/amd64 binary for production hosts
 build_linux:
-	$(GOBUILD) -v -o ./bin/balance_monitor ./cmd/app
+	mkdir -p ./bin
+	$(GOBUILD) -ldflags="-s -w" -v -o ./bin/balance_monitor ./cmd/app
+
+clean:
+	rm -rf ./bin
