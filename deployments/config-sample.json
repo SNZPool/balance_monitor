@@ -4,6 +4,7 @@
   "info": [
     {
       "network": "evm",
+      "symbol": "METIS",
       "endpoints": [
           "https://andromeda.metis.io/?owner=1088",
           "https://metis-mainnet.public.blastapi.io"
@@ -25,6 +26,7 @@
     },
     {
       "network": "tempo",
+      "symbol": "pathUSD",
       "endpoints": [
           "https://tempo-mainnet.drpc.org"
       ],
@@ -40,6 +42,7 @@
     },
     {
       "network": "starknet",
+      "symbol": "ETH",
       "endpoints": [
           "https://starknet-mainnet.public.blastapi.io"
       ],
@@ -54,6 +57,7 @@
     },
     {
       "network": "starknet_strk",
+      "symbol": "STRK",
       "endpoints": [
           "https://rpc.starknet.lava.build:443"
       ],
@@ -68,6 +72,7 @@
     },
     {
       "network": "tron",
+      "symbol": "TRX",
       "endpoints": [
           "https://api.trongrid.io/jsonrpc"
       ],

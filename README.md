@@ -12,7 +12,7 @@ Supported chains:
 | Starknet | ETH (`starknet` / `starknet_eth`) or STRK (`starknet_strk`) | Any SNIP-20-style contract |
 | Tron | Native TRX | Not supported |
 
-Old configs without `tokenAddress` / `tokenDecimals` keep working unchanged.
+Old configs without `tokenAddress` / `tokenDecimals` / `symbol` keep working unchanged.
 
 ## Requirements
 
@@ -54,7 +54,7 @@ On-demand CSV export of the latest polled balances (no continuous file write):
 curl -o balances.csv "http://<host>:<metricPort>/export.csv"
 ```
 
-Columns: `network`, `label`, `address`, `balance`, `tokenAddress` (empty when monitoring the network default / native asset). Data reflects the last completed poll for each address; before the first cycle finishes the file may be empty or partial.
+Columns: `network`, `label`, `address`, `balance`, `tokenAddress`, `symbol`. `tokenAddress` / `symbol` are empty when unset. Data reflects the last completed poll for each address; before the first cycle finishes the file may be empty or partial.
 
 ## Configuration
 
@@ -75,6 +75,7 @@ Full example: [`deployments/config-sample.json`](./deployments/config-sample.jso
 |-------|------|----------|-------------|
 | `network` | string | yes | Chain selector (see [Network values](#network-values)) |
 | `endpoints` | string[] | yes | RPC URLs; the one with the **highest block height** is used each cycle |
+| `symbol` | string | no | Gas / token symbol for CSV export and multi-chain stats (e.g. `ETH`, `pathUSD`). Display-only; not used for RPC calls |
 | `tokenAddress` | string | no | ERC20 / SNIP-20 contract. Empty = network default asset |
 | `tokenDecimals` | int | no | Fallback decimals if on-chain `decimals()` fails |
 | `addressList` | array | yes | Addresses to monitor |
@@ -125,6 +126,7 @@ To monitor **two assets on the same chain**, use two `info` entries (for example
 ```json
 {
   "network": "tempo",
+  "symbol": "pathUSD",
   "endpoints": ["https://tempo-mainnet.drpc.org"],
   "tokenAddress": "0x20C0000000000000000000000000000000000000",
   "addressList": [
@@ -165,6 +167,7 @@ If `decimals()` fails on a non-standard contract, set `"tokenDecimals": 6` (path
 ```json
 {
   "network": "evm",
+  "symbol": "METIS",
   "endpoints": [
     "https://andromeda.metis.io/?owner=1088",
     "https://metis-mainnet.public.blastapi.io"

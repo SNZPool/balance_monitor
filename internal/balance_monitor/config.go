@@ -19,6 +19,7 @@ type AddressInfo struct {
 type Network struct {
 	Network       string        `json:"network"`
 	Endpoints     []string      `json:"endpoints"`
+	Symbol        string        `json:"symbol,omitempty"`        // gas/token symbol for export (e.g. ETH, pathUSD); display-only
 	TokenAddress  string        `json:"tokenAddress,omitempty"`  // empty = default asset for this network
 	TokenDecimals *int          `json:"tokenDecimals,omitempty"` // optional override; nil = read decimals on-chain
 	AddressList   []AddressInfo `json:"addressList"`
@@ -76,6 +77,9 @@ func PrintConfig() {
 	fmt.Printf("rpcRPS: %g\n", EffectiveRpcRPS())
 	for i := 0; i < len(gConf.NetworkList); i++ {
 		fmt.Println(gConf.NetworkList[i].Network)
+		if gConf.NetworkList[i].Symbol != "" {
+			fmt.Printf("symbol: %s\n", gConf.NetworkList[i].Symbol)
+		}
 		if gConf.NetworkList[i].TokenAddress != "" {
 			fmt.Printf("tokenAddress: %s\n", gConf.NetworkList[i].TokenAddress)
 		}

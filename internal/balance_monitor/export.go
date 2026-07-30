@@ -14,10 +14,11 @@ type BalanceSnapshot struct {
 	Address      string
 	Balance      float64
 	TokenAddress string
+	Symbol       string
 }
 
 var (
-	snapshotMu   sync.RWMutex
+	snapshotMu    sync.RWMutex
 	snapshotByKey = make(map[string]BalanceSnapshot)
 )
 
@@ -25,7 +26,7 @@ func snapshotKey(network, label, address string) string {
 	return network + "\x00" + label + "\x00" + address
 }
 
-func recordSnapshot(network, label, address, tokenAddress string, balance float64) {
+func recordSnapshot(network, label, address, tokenAddress, symbol string, balance float64) {
 	snapshotMu.Lock()
 	defer snapshotMu.Unlock()
 	snapshotByKey[snapshotKey(network, label, address)] = BalanceSnapshot{
@@ -34,6 +35,7 @@ func recordSnapshot(network, label, address, tokenAddress string, balance float6
 		Address:      address,
 		Balance:      balance,
 		TokenAddress: tokenAddress,
+		Symbol:       symbol,
 	}
 }
 
@@ -58,7 +60,7 @@ func handleExportCSV(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Disposition", `attachment; filename="balances.csv"`)
 
 	cw := csv.NewWriter(w)
-	if err := cw.Write([]string{"network", "label", "address", "balance", "tokenAddress"}); err != nil {
+	if err := cw.Write([]string{"network", "label", "address", "balance", "tokenAddress", "symbol"}); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -69,6 +71,7 @@ func handleExportCSV(w http.ResponseWriter, r *http.Request) {
 			row.Address,
 			fmt.Sprintf("%g", row.Balance),
 			row.TokenAddress,
+			row.Symbol,
 		}); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

@@ -77,7 +77,7 @@ func checkNetwork(ctx context.Context, limiters *EndpointLimiters, oneNetwork Ne
 			defer addrWg.Done()
 			if err := limiters.Wait(ctx, selectedUrl); err != nil {
 				fmt.Printf("rate limit wait failed for %s: %v\n", selectedUrl, err)
-				updateMetrics(oneAddressInfo, networkName, oneNetwork.TokenAddress, -1)
+				updateMetrics(oneAddressInfo, networkName, oneNetwork.TokenAddress, oneNetwork.Symbol, -1)
 				return
 			}
 			balance := blockchain.GetBalance(
@@ -87,20 +87,20 @@ func checkNetwork(ctx context.Context, limiters *EndpointLimiters, oneNetwork Ne
 				oneNetwork.TokenAddress,
 				oneNetwork.TokenDecimals,
 			)
-			updateMetrics(oneAddressInfo, networkName, oneNetwork.TokenAddress, balance)
+			updateMetrics(oneAddressInfo, networkName, oneNetwork.TokenAddress, oneNetwork.Symbol, balance)
 		}(oneNetwork.AddressList[j])
 	}
 	addrWg.Wait()
 }
 
-func updateMetrics(oneAddressInfo AddressInfo, networkName, tokenAddress string, balance float64) {
+func updateMetrics(oneAddressInfo AddressInfo, networkName, tokenAddress, symbol string, balance float64) {
 	address := oneAddressInfo.Address
 	label := oneAddressInfo.Label
 	infoThreshold := oneAddressInfo.InfoThreshold
 	warnThreshold := oneAddressInfo.WarnThreshold
 
 	balance_monitor_address_balance.WithLabelValues(label, networkName, address).Set(balance)
-	recordSnapshot(networkName, label, address, tokenAddress, balance)
+	recordSnapshot(networkName, label, address, tokenAddress, symbol, balance)
 
 	var lowFlag float64
 	var warnFlag float64
