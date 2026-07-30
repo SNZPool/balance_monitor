@@ -6,7 +6,7 @@ GOTEST=$(GOCMD) test
 GOGET=$(GOCMD) get
 
 test:
-	go run ./cmd/app/balance_monitor.go -config ./depolyments/config-sample.toml
+	go run ./cmd/app/balance_monitor.go -config ./deployments/config-sample.json
 
 install:
 	@GOPROXY=https://proxy.golang.org,direct go mod tidy

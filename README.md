@@ -38,7 +38,7 @@ Flags:
 |------|---------|-------------|
 | `-config` | `balanceCheckConfig.json` | Path to the config file |
 
-The loader expects **JSON** content. The sample file is named `depolyments/config-sample.toml` for historical reasons; the content is JSON.
+The loader expects **JSON** content. See the sample at [`deployments/config-sample.json`](./deployments/config-sample.json).
 
 Quick local run against the sample:
 
@@ -58,7 +58,7 @@ Columns: `network`, `label`, `address`, `balance`, `tokenAddress` (empty when mo
 
 ## Configuration
 
-Full example: [`depolyments/config-sample.toml`](./depolyments/config-sample.toml).
+Full example: [`deployments/config-sample.json`](./deployments/config-sample.json).
 
 ### Top-level fields
 
