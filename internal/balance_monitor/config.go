@@ -17,9 +17,11 @@ type AddressInfo struct {
 }
 
 type Network struct {
-	Network     string        `json:"network"`
-	Endpoints   []string      `json:"endpoints"`
-	AddressList []AddressInfo `json:"addressList"`
+	Network       string        `json:"network"`
+	Endpoints     []string      `json:"endpoints"`
+	TokenAddress  string        `json:"tokenAddress,omitempty"`  // empty = default asset for this network
+	TokenDecimals *int          `json:"tokenDecimals,omitempty"` // optional override; nil = read decimals on-chain
+	AddressList   []AddressInfo `json:"addressList"`
 }
 
 type Conf struct {
@@ -63,6 +65,12 @@ func PrintConfig() {
 	fmt.Println(gConf.MetricPort)
 	for i := 0; i < len(gConf.NetworkList); i++ {
 		fmt.Println(gConf.NetworkList[i].Network)
+		if gConf.NetworkList[i].TokenAddress != "" {
+			fmt.Printf("tokenAddress: %s\n", gConf.NetworkList[i].TokenAddress)
+		}
+		if gConf.NetworkList[i].TokenDecimals != nil {
+			fmt.Printf("tokenDecimals: %d\n", *gConf.NetworkList[i].TokenDecimals)
+		}
 		for j := 0; j < len(gConf.NetworkList[i].Endpoints); j++ {
 			fmt.Println(gConf.NetworkList[i].Endpoints[j])
 		}

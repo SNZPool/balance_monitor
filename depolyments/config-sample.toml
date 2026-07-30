@@ -24,6 +24,21 @@
       ]
     },
     {
+      "network": "tempo",
+      "endpoints": [
+          "https://tempo-mainnet.drpc.org"
+      ],
+      "tokenAddress": "0x20C0000000000000000000000000000000000000",
+      "addressList": [
+        {
+          "address":"0x0000000000000000000000000000000000000001",
+          "label":"tempo_ops_pathusd",
+          "infoThreshold": 100,
+          "warnThreshold": 20
+        }
+      ]
+    },
+    {
       "network": "starknet",
       "endpoints": [
           "https://starknet-mainnet.public.blastapi.io"

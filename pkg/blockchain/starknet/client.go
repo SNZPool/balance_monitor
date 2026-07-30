@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 
 	// "os"
@@ -96,20 +95,21 @@ func sendJsonPOSTRequest(urlStr string, jsonStr string) (rest Rest, state error)
 }
 
 func GetBalanceETH(urlStr string, ethAddress string) float64 {
-	return GetBalance(urlStr, ethAddress, ethMainnetContract)
+	return GetBalance(urlStr, ethAddress, ethMainnetContract, nil)
 }
 
 func GetBalanceSTRK(urlStr string, ethAddress string) float64 {
-	return GetBalance(urlStr, ethAddress, strkMainnetContract)
+	return GetBalance(urlStr, ethAddress, strkMainnetContract, nil)
 }
 
-func GetBalance(urlStr string, ethAddress string, erc20ContractAddress string) float64 {
+// GetBalance returns the SNIP-20 / ERC20-like token balance for ethAddress.
+// If decimalsOverride is non-nil, it is used when the on-chain decimals() call fails.
+func GetBalance(urlStr string, ethAddress string, erc20ContractAddress string, decimalsOverride *int) float64 {
 	clientv02, err := rpc.NewProvider(urlStr)
 	if err != nil {
-		log.Fatal(fmt.Sprintf("Error dialing the RPC provider: %s", err))
+		fmt.Printf("Error dialing the RPC provider: %s\n", err)
+		return -1.0
 	}
-
-	// fmt.Println("Established connection with the client")
 
 	tokenAddressInFelt, err := utils.HexToFelt(erc20ContractAddress)
 	if err != nil {
@@ -130,24 +130,28 @@ func GetBalance(urlStr string, ethAddress string, erc20ContractAddress string) f
 		Calldata:           []*felt.Felt{accountAddressInFelt},
 	}
 
-	// fmt.Println("Making balanceOf() request")
 	callResp, rpcErr := clientv02.Call(context.Background(), tx, rpc.BlockID{Tag: "latest"})
 	if rpcErr != nil {
 		return -1.0
 	}
 
-	// Get token's decimals
+	// Get token's decimals (prefer on-chain; fall back to override)
+	var decimalsBig *big.Int
 	getDecimalsTx := rpc.FunctionCall{
 		ContractAddress:    tokenAddressInFelt,
 		EntryPointSelector: utils.GetSelectorFromNameFelt(getDecimalsMethod),
 	}
 	getDecimalsResp, rpcErr := clientv02.Call(context.Background(), getDecimalsTx, rpc.BlockID{Tag: "latest"})
-	if rpcErr != nil {
+	if rpcErr == nil && len(getDecimalsResp) > 0 {
+		decimalsBig = utils.FeltToBigInt(getDecimalsResp[0])
+	} else if decimalsOverride != nil {
+		decimalsBig = big.NewInt(int64(*decimalsOverride))
+	} else {
 		return -1.0
 	}
 
 	floatValue := new(big.Float).SetInt(utils.FeltToBigInt(callResp[0]))
-	floatValue.Quo(floatValue, new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), utils.FeltToBigInt(getDecimalsResp[0]), nil)))
+	floatValue.Quo(floatValue, new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), decimalsBig, nil)))
 
 	value, _ := floatValue.Float64()
 

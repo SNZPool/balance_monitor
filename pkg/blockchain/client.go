@@ -11,7 +11,7 @@ import (
 )
 
 var gEVMList = []string{
-	"eth", "ethereum", "bsc", "matic", "polygon", "heco", "ftm", "fatom", "arb", "arbitrum", "xdai", "avax", "avalanche", "harmony", "one", "metis", "evm",
+	"eth", "ethereum", "bsc", "matic", "polygon", "heco", "ftm", "fatom", "arb", "arbitrum", "xdai", "avax", "avalanche", "harmony", "one", "metis", "evm", "tempo",
 }
 
 var gStarknetList = []string{"starknet", "starknet_eth", "starknet_strk"}
@@ -47,16 +47,36 @@ func GetBlockHeight(urlStr string, network string) int64 {
 	}
 }
 
-func GetBalance(urlStr string, network string, address string) float64 {
+// GetBalance fetches the balance for address on the given network.
+// When tokenAddress is empty, uses the network default asset (native for EVM/Tron;
+// ETH or STRK for Starknet aliases). When set, queries that ERC20 / SNIP-20 contract.
+func GetBalance(urlStr string, network string, address string, tokenAddress string, tokenDecimals *int) float64 {
 
 	if common.InStringList(network, gEVMList) {
-		result := evm.GetBalanceGo(urlStr, address)
-		if result < 0 {
-			time.Sleep(time.Duration(interval) * time.Second)
+		var result float64
+		if tokenAddress != "" {
+			result = evm.GetERC20Balance(urlStr, tokenAddress, address, tokenDecimals)
+			if result < 0 {
+				time.Sleep(time.Duration(interval) * time.Second)
+				result = evm.GetERC20Balance(urlStr, tokenAddress, address, tokenDecimals)
+			}
+		} else {
 			result = evm.GetBalanceGo(urlStr, address)
+			if result < 0 {
+				time.Sleep(time.Duration(interval) * time.Second)
+				result = evm.GetBalanceGo(urlStr, address)
+			}
 		}
 		return result
 	} else if common.InStringList(network, gStarknetList) {
+		if tokenAddress != "" {
+			result := startknet.GetBalance(urlStr, address, tokenAddress, tokenDecimals)
+			if result < 0 {
+				time.Sleep(time.Duration(interval) * time.Second)
+				result = startknet.GetBalance(urlStr, address, tokenAddress, tokenDecimals)
+			}
+			return result
+		}
 		if network == "starknet_strk" {
 			result := startknet.GetBalanceSTRK(urlStr, address)
 			if result < 0 {
@@ -64,15 +84,18 @@ func GetBalance(urlStr string, network string, address string) float64 {
 				result = startknet.GetBalanceSTRK(urlStr, address)
 			}
 			return result
-		} else {
-			result := startknet.GetBalanceETH(urlStr, address)
-			if result < 0 {
-				time.Sleep(time.Duration(interval) * time.Second)
-				result = startknet.GetBalanceETH(urlStr, address)
-			}
-			return result
 		}
+		result := startknet.GetBalanceETH(urlStr, address)
+		if result < 0 {
+			time.Sleep(time.Duration(interval) * time.Second)
+			result = startknet.GetBalanceETH(urlStr, address)
+		}
+		return result
 	} else if common.InStringList(network, gTronList) {
+		if tokenAddress != "" {
+			fmt.Printf("tokenAddress is not supported for network %s\n", network)
+			return -1
+		}
 		result := tron.GetBalanceGo(urlStr, address)
 		if result < 0 {
 			time.Sleep(time.Duration(interval) * time.Second)

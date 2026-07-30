@@ -58,7 +58,7 @@ func RunBalanceCheck() {
 				infoThreshold := oneAddressInfo.InfoThreshold
 				warnThreshold := oneAddressInfo.WarnThreshold
 
-				balance := blockchain.GetBalance(selectedUrl, networkName, address)
+				balance := blockchain.GetBalance(selectedUrl, networkName, address, oneNetwork.TokenAddress, oneNetwork.TokenDecimals)
 				balance_monitor_address_balance.WithLabelValues(label, networkName, address).Set(balance)
 
 				lowFlag = 0

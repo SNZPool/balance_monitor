@@ -1,157 +1,201 @@
 [![Go Build Check](https://github.com/SNZPool/balance_monitor/actions/workflows/build.yml/badge.svg)](https://github.com/SNZPool/balance_monitor/actions/workflows/build.yml)
 
-# Introduction
+# Balance Monitor
 
-This project is designed to retrieve the gas balance from multiple addresses across various blockchains. Currently, it supports EVM chains and the Starknet chain.
+Poll wallet balances across multiple chains and expose Prometheus gauges for balance and low-balance thresholds.
 
-Additionally, it allows you to monitor whether an address's balance falls below specified thresholds. You can set up to two levels of thresholds for monitoring purposes.
+Supported chains:
 
+| Family | Default asset (no `tokenAddress`) | Optional `tokenAddress` |
+|--------|-----------------------------------|-------------------------|
+| EVM (aliases below) | Native gas token (`eth_getBalance` / `BalanceAt`) | Any ERC20 (`balanceOf` + `decimals`) |
+| Starknet | ETH (`starknet` / `starknet_eth`) or STRK (`starknet_strk`) | Any SNIP-20-style contract |
+| Tron | Native TRX | Not supported |
 
-# Install
+Old configs without `tokenAddress` / `tokenDecimals` keep working unchanged.
 
-At first, install `golang(>=1.23.0)`.
+## Requirements
 
-Then, install and build
+- Go `>= 1.23.0`
+
+## Install and build
+
+```bash
+make install   # go mod tidy
+make build     # ./bin/balance_monitor (host OS)
+# make build_linux   # linux/amd64 binary
 ```
-make install
-make build
+
+## Usage
+
+```bash
+./bin/balance_monitor -config /path/to/config.json
 ```
 
-The binary `balance_monitor` can be found in path `./bin`.
+Flags:
 
-# Usage
+| Flag | Default | Description |
+|------|---------|-------------|
+| `-config` | `balanceCheckConfig.json` | Path to the config file |
 
-You must create a config file and run it as below command.
+The loader expects **JSON** content. The sample file is named `depolyments/config-sample.toml` for historical reasons; the content is JSON.
 
+Quick local run against the sample:
+
+```bash
+make test
 ```
-./balance_monitor -config config.toml
-```
 
-# How to edit the config file
+Prometheus metrics are served at `http://<host>:<metricPort>/metrics`.
 
-You can find a example config file at path `./depolyments/config-sample.toml`
-```
+## Configuration
+
+Full example: [`depolyments/config-sample.toml`](./depolyments/config-sample.toml).
+
+### Top-level fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `frequency` | int | Poll interval in seconds |
+| `metricPort` | int | HTTP port for `/metrics` |
+| `info` | array | Per-chain (or per-asset) monitor groups |
+
+### Network group (`info[]`)
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `network` | string | yes | Chain selector (see [Network values](#network-values)) |
+| `endpoints` | string[] | yes | RPC URLs; the one with the **highest block height** is used each cycle |
+| `tokenAddress` | string | no | ERC20 / SNIP-20 contract. Empty = network default asset |
+| `tokenDecimals` | int | no | Fallback decimals if on-chain `decimals()` fails |
+| `addressList` | array | yes | Addresses to monitor |
+
+### Address entry (`addressList[]`)
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `address` | string | Wallet / account address |
+| `label` | string | Prometheus `name` label (use a unique, readable value) |
+| `infoThreshold` | float | Soft low threshold → `balance_low = 1` |
+| `warnThreshold` | float | Critical low threshold → `balance_empty = 1` |
+
+Prefer `infoThreshold > warnThreshold`. Threshold flags are mutually exclusive: critical sets only `balance_empty`, not both.
+
+### Network values
+
+**EVM aliases** (native when `tokenAddress` is empty; ERC20 when set):
+
+`eth`, `ethereum`, `bsc`, `matic`, `polygon`, `heco`, `ftm`, `fatom`, `arb`, `arbitrum`, `xdai`, `avax`, `avalanche`, `harmony`, `one`, `metis`, `evm`, `tempo`
+
+**Starknet:**
+
+| `network` | Default contract when `tokenAddress` is empty |
+|-----------|-----------------------------------------------|
+| `starknet`, `starknet_eth` | Starknet ETH |
+| `starknet_strk` | STRK |
+
+**Tron:** `tron` (native TRX only; `tokenAddress` is rejected).
+
+### `tokenAddress` behavior
+
+| `network` | `tokenAddress` | Behavior |
+|-----------|----------------|----------|
+| EVM alias | empty | Native balance |
+| EVM alias | set | ERC20 `balanceOf` / `decimals` |
+| `starknet` / `starknet_eth` | empty | Default ETH contract |
+| `starknet_strk` | empty | Default STRK contract |
+| any `starknet*` | set | Configured contract |
+| `tron` | set | Error (`rpc_bad`) |
+
+To monitor **two assets on the same chain**, use two `info` entries (for example native + ERC20, or Starknet ETH + STRK). Distinguishing assets in metrics relies on `network` and/or `label` — there is no `token` metric label.
+
+### Examples
+
+**Tempo pathUSD (gas token as ERC20):**
+
+```json
 {
-  "frequency": 300,
-  "metricPort": 8888,
-  "info": [
+  "network": "tempo",
+  "endpoints": ["https://tempo-mainnet.drpc.org"],
+  "tokenAddress": "0x20C0000000000000000000000000000000000000",
+  "addressList": [
     {
-      "network": "evm",
-      "endpoints": [
-          "https://andromeda.metis.io/?owner=1088",
-          "https://metis-mainnet.public.blastapi.io"
-      ],
-      "addressList": [
-        {
-          "address":"0x282976F47d7C1cE8B9f956241105d5741f203fA6",
-          "label":"metis_user1_account",
-          "infoThreshold": 0.05,
-          "warnThreshold": 0.02
-        },
-        {
-          "address":"0x81251B395506b4BfF35DB657751285c138BFB3F5",
-          "label":"metis_user2_account",
-          "infoThreshold": 0.1,
-          "warnThreshold": 0.02
-        }
-      ]
-    },
-    {
-      "network": "startknet",
-      "endpoints": [
-          "https://starknet-mainnet.public.blastapi.io",
-          "https://free-rpc.nethermind.io/mainnet-juno"
-      ],
-      "addressList": [
-        {
-          "address":"0x07892c7bf9fc9b9135ab18ddfdc3640d75aa56ed9761fa43bf7eda8bfdfc5919",
-          "label":"starknet_user1_account",
-          "infoThreshold": 0.002,
-          "warnThreshold": 0.001
-        }
-      ]
-    },
-    {
-      "network": "starknet_strk",
-      "endpoints": [
-          "https://starknet-mainnet.public.blastapi.io",
-          "https://free-rpc.nethermind.io/mainnet-juno"
-      ],
-      "addressList": [
-        {
-          "address":"0x07892c7bf9fc9b9135ab18ddfdc3640d75aa56ed9761fa43bf7eda8bfdfc5919",
-          "label":"starknet_strk_user1_account",
-          "infoThreshold": 0.002,
-          "warnThreshold": 0.001
-        }
-      ]
-    },
-    {
-      "network": "tron",
-      "endpoints": [
-          "https://api.trongrid.io/jsonrpc"
-      ],
-      "addressList": [
-        {
-          "address":"0xD321B44079CF1AC77F29D719D52DB168206EA246",
-          "label":"tron_user1_account",
-          "infoThreshold": 0.002,
-          "warnThreshold": 0.001
-        }
-      ]
+      "address": "0xYourAddress",
+      "label": "tempo_ops_pathusd",
+      "infoThreshold": 100,
+      "warnThreshold": 20
     }
   ]
 }
 ```
 
-## Structure of toml config file
+If `decimals()` fails on a non-standard contract, set `"tokenDecimals": 6` (pathUSD uses 6 decimals on Tempo mainnet).
 
-**Common Parameter**
-- frequency: how long (seconds) the program to update the balance
-- metricPort: the metric port for prometheus
-- info: monitor info arrays, divided by blockchains
+**Starknet STRK via explicit contract** (equivalent default to `network: "starknet_strk"` with empty `tokenAddress`):
 
-**Blockchain Parameter**
-- network: support `evm`(Native Token), `starknet`(ETH), `starknet_strk`(STRK) and `tron`(TRX).
-- endpoins: you can enter multiple rpc's at the same time. Only the rpc with the highest height will be used
-- addressList: you can enter multiple address for monitoring
+```json
+{
+  "network": "starknet",
+  "endpoints": ["https://starknet-mainnet.public.blastapi.io"],
+  "tokenAddress": "0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
+  "addressList": [
+    {
+      "address": "0xYourStarknetAccount",
+      "label": "starknet_strk_user1_account",
+      "infoThreshold": 0.002,
+      "warnThreshold": 0.001
+    }
+  ]
+}
+```
 
-**AddressList Parameter**
-- address: the address
-- label: used to distinguish address names by metrics label
-- infoThreshold: when the balance of the address is below than this value, the monitor metric `balance_monitor_balance_low` is 1
-- warnThreshold:  when the balance of the address is below than this value, the monitor metric `balance_monitor_balance_empty` is 1
+**Backward compatibility:** keep existing `network: "starknet_strk"` entries without `tokenAddress` so Prometheus `network` labels and alerts do not change. Migrating to `network: "starknet"` + `tokenAddress` changes the `network` label and may require updating dashboards/alerts.
 
+**EVM native** (unchanged from older configs):
 
-## Monitor Metrics
+```json
+{
+  "network": "evm",
+  "endpoints": [
+    "https://andromeda.metis.io/?owner=1088",
+    "https://metis-mainnet.public.blastapi.io"
+  ],
+  "addressList": [
+    {
+      "address": "0xYourAddress",
+      "label": "metis_user1_account",
+      "infoThreshold": 0.05,
+      "warnThreshold": 0.02
+    }
+  ]
+}
+```
 
-| Metric Name | Description | Value |
-| ---- | ---- | ---- |
-| balance_monitor_address_balance | the gas balance in your address | float |
-| balance_monitor_rpc_bad | is there an inaccessible rpc in the rpc you are using? | 0 or 1(yes) |
-| balance_monitor_balance_low | whether the balance is below the infoThreshold | 0 or 1(yes) |
-| balance_monitor_balance_empty | whether the balance is below the warnThreshold | 0 or 1(yes) |
+## How it works
 
-**Sample output of metrics**
+Each `frequency` seconds, for every `info` group:
+
+1. Query block height on all `endpoints` and pick the highest.
+2. For each address, fetch the balance (native or token).
+3. Compare against thresholds and update Prometheus gauges.
+4. On fetch failure the balance is treated as `-1` and `rpc_bad` is set to `1`. Failed RPC calls are retried once after a short delay.
+
+## Monitor metrics
+
+Exported names use subsystem prefix `sdk_` (for example `sdk_balance_monitor_address_balance`).
+
+| Metric | Labels | Description |
+|--------|--------|-------------|
+| `sdk_balance_monitor_address_balance` | `name`, `network`, `address` | Normalized balance (float) |
+| `sdk_balance_monitor_rpc_bad` | `name`, `network` | `1` if the last fetch failed |
+| `sdk_balance_monitor_balance_low` | `name`, `network`, `address` | `1` if `warnThreshold < balance < infoThreshold` |
+| `sdk_balance_monitor_balance_empty` | `name`, `network`, `address` | `1` if `balance < warnThreshold` |
+
+Sample series:
 
 ```
-sdk_balance_monitor_address_balance{address="0x07892c7bf9fc9b9135ab18ddfdc3640d75aa56ed9761fa43bf7eda8bfdfc5919",name="starknet_strk_user1_account",network="starknet_strk"} 0.029946571772853176
-sdk_balance_monitor_address_balance{address="0x07892c7bf9fc9b9135ab18ddfdc3640d75aa56ed9761fa43bf7eda8bfdfc5919",name="starknet_user1_account",network="starknet"} 0.002010528992142664
-sdk_balance_monitor_address_balance{address="0x282976F47d7C1cE8B9f956241105d5741f203fA6",name="metis_user1_account",network="evm"} 0.3353651618530689
-sdk_balance_monitor_address_balance{address="0x81251B395506b4BfF35DB657751285c138BFB3F5",name="metis_user2_account",network="evm"} 0.23918426945428795
-
-sdk_balance_monitor_balance_empty{address="0x07892c7bf9fc9b9135ab18ddfdc3640d75aa56ed9761fa43bf7eda8bfdfc5919",name="starknet_strk_user1_account",network="starknet_strk"} 0
-sdk_balance_monitor_balance_empty{address="0x07892c7bf9fc9b9135ab18ddfdc3640d75aa56ed9761fa43bf7eda8bfdfc5919",name="starknet_user1_account",network="starknet"} 0
-sdk_balance_monitor_balance_empty{address="0x282976F47d7C1cE8B9f956241105d5741f203fA6",name="metis_user1_account",network="evm"} 0
-sdk_balance_monitor_balance_empty{address="0x81251B395506b4BfF35DB657751285c138BFB3F5",name="metis_user2_account",network="evm"} 0
-
-sdk_balance_monitor_balance_low{address="0x07892c7bf9fc9b9135ab18ddfdc3640d75aa56ed9761fa43bf7eda8bfdfc5919",name="starknet_strk_user1_account",network="starknet_strk"} 0
-sdk_balance_monitor_balance_low{address="0x07892c7bf9fc9b9135ab18ddfdc3640d75aa56ed9761fa43bf7eda8bfdfc5919",name="starknet_user1_account",network="starknet"} 0
-sdk_balance_monitor_balance_low{address="0x282976F47d7C1cE8B9f956241105d5741f203fA6",name="metis_user1_account",network="evm"} 0
-sdk_balance_monitor_balance_low{address="0x81251B395506b4BfF35DB657751285c138BFB3F5",name="metis_user2_account",network="evm"} 0
-
+sdk_balance_monitor_address_balance{address="0x...",name="metis_user1_account",network="evm"} 0.335
+sdk_balance_monitor_balance_low{address="0x...",name="metis_user1_account",network="evm"} 0
+sdk_balance_monitor_balance_empty{address="0x...",name="metis_user1_account",network="evm"} 0
 sdk_balance_monitor_rpc_bad{name="metis_user1_account",network="evm"} 0
-sdk_balance_monitor_rpc_bad{name="metis_user2_account",network="evm"} 0
-sdk_balance_monitor_rpc_bad{name="starknet_strk_user1_account",network="starknet_strk"} 0
-sdk_balance_monitor_rpc_bad{name="starknet_user1_account",network="starknet"} 0
 ```
